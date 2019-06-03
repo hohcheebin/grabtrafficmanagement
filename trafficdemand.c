@@ -1,7 +1,5 @@
 /*
  *  Copyright 2019, Chee Bin Hoh, All right reserved.
- *
- *
  */
 
 #include <stdio.h>
