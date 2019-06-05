@@ -8,6 +8,8 @@
 #include <ctype.h>
 #include <unistd.h>
 
+#define DEMANDSIZE_PER_NODE  500
+
 struct demand
 {
     char   geohash6[7];
@@ -19,12 +21,36 @@ struct demand
 
 typedef struct demand Demand;
 
+struct demandnode
+{
+    struct demandnode *next;
+    struct demandnode *prev;
+    long               cnt;
+    struct demand     *d[1];
+};
+
+typedef struct demandnode DemandNode;
+
+struct demandintime
+{
+    DemandNode * day[365];
+    DemandNode * hour[365 * 24];
+    DemandNode * mininterval[365 * 24 * 4]; 
+};
+
+
+// functions...
+DemandNode *
+newDemandNode( size_t num );
+
 Demand *
 scanDemand( char * cptr, Demand * dptr );
 
 int
 main( int argc, char * argv[] )
-{
+{ 
+    struct demandintime dInTime = { { 0 }, { 0 }, { 0 } };
+
     Demand * base  = NULL;
     Demand * dptr  = NULL;
     long     nrDemand = 0; 
@@ -97,12 +123,57 @@ main( int argc, char * argv[] )
         }
     } while ( 1 );
 
-    printf( "geohash6,day,timestamp,demand\n" );
-
-    for ( n = 0; n <nrDemand; n++ )
+    // demand in time
+    for ( n = 0; n < nrDemand; n++ )
     {
-        printf( "%-6s,%02d,%02d:%02d,%1.16lf\n", dptr[n].geohash6, dptr[n].day, dptr[n].hh, dptr[n].mm, dptr[n].value );
+        int d = dptr[n].day - 1;
+        DemandNode *nPtr = dInTime.day[d];
+
+        if ( NULL == nPtr 
+             || nPtr->cnt >= DEMANDSIZE_PER_NODE )
+        {
+             DemandNode *newNode;
+
+             newNode = newDemandNode( DEMANDSIZE_PER_NODE );
+             if ( NULL == newNode )
+             {
+                 fprintf( stderr, "no memory for new demand node of size = %d\n", DEMANDSIZE_PER_NODE );
+                 exit( 1 );
+             }
+
+             newNode->next = nPtr;
+             if ( NULL != nPtr )
+             {
+                 nPtr->prev = newNode;
+             }
+
+             dInTime.day[d] = newNode;         
+
+             nPtr = dInTime.day[d];
+        }
+
+        nPtr->d[nPtr->cnt++] = &( dptr[n] );
     }
+
+    /*
+    for ( n = 0; n < 365; n++ )
+    {
+        DemandNode *nPtr;
+    
+        for ( nPtr = dInTime.day[n]; NULL != nPtr; nPtr = nPtr->next )
+        {
+            int i;
+
+            for ( i = 0; i < nPtr->cnt; i++ )
+            {
+                printf( "%s\t%d\t%02d:%02d\t%lf\n",
+                        nPtr->d[i]->geohash6, nPtr->d[i]->day, nPtr->d[i]->hh, nPtr->d[i]->mm, nPtr->d[i]->value );
+	    }
+        }
+    }
+     */
+
+    // yup, I do not release memory as OS will claim it, there is no point to do so. :)
 
     return 0;
 }
@@ -190,3 +261,19 @@ scanDemand( char * cptr, Demand * dptr )
     return dptr;
 }
 
+
+DemandNode *
+newDemandNode( size_t num )
+{
+    DemandNode *newNode;
+
+    newNode = malloc( sizeof( DemandNode ) + ( ( num - 1 ) * ( sizeof( Demand * ) ) ) );
+    if ( NULL != newNode )
+    {
+        newNode->next = NULL;
+        newNode->prev = NULL;
+        newNode->cnt = 0;
+    }
+
+    return newNode;
+}
