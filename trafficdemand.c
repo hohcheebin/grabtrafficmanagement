@@ -7,8 +7,12 @@
 #include <string.h>
 #include <ctype.h>
 #include <unistd.h>
+#include <assert.h>
 
 #define DEMANDSIZE_PER_NODE  500
+#define DAYS_IN_YEAR         365
+#define HOURS_IN_YEAR        ( DAYS_IN_YEAR * 24 )
+#define MININTERVALS_IN_YEAR  ( HOURS_IN_YEAR * 4 )
 
 struct demand
 {
@@ -26,31 +30,52 @@ struct demandnode
     struct demandnode *next;
     struct demandnode *prev;
     long               cnt;
-    struct demand     *d[1];
+    Demand            *d[1];
 };
 
 typedef struct demandnode DemandNode;
 
 struct demandintime
 {
-    DemandNode * day[365];
-    DemandNode * hour[365 * 24];
-    DemandNode * mininterval[365 * 24 * 4]; 
+    DemandNode * day[DAYS_IN_YEAR];
+    DemandNode * hour[HOURS_IN_YEAR];
+    DemandNode * mininterval[MININTERVALS_IN_YEAR]; 
 };
 
+typedef struct demandintime DemandInTime;
 
 // functions...
+Demand *
+scanDemand( char * cptr, Demand * dptr );
+
 DemandNode *
 newDemandNode( size_t num );
 
-Demand *
-scanDemand( char * cptr, Demand * dptr );
+DemandInTime *
+newDemandInTime( void );
+
+void
+deleteDemandNode( DemandNode * list );
+
+void
+deleteDemandInTime( DemandInTime * dit ); 
+
+DemandNode *
+processDemandNode( DemandNode * list, Demand * dptr, int nrDemand );
+
+void
+processDemandInTime( DemandInTime * dit, Demand * dptr, int nrDemand );
+
+void
+printDebugDemandInTime( DemandInTime * dit );
+
+void
+printDebugDemandNode( DemandNode * list );
 
 int
 main( int argc, char * argv[] )
 { 
-    struct demandintime dInTime = { { 0 }, { 0 }, { 0 } };
-
+    DemandInTime *dit = NULL;
     Demand * base  = NULL;
     Demand * dptr  = NULL;
     long     nrDemand = 0; 
@@ -124,59 +149,197 @@ main( int argc, char * argv[] )
     } while ( 1 );
 
     // demand in time
-    for ( n = 0; n < nrDemand; n++ )
+    dit = newDemandInTime();
+    if ( NULL == dit )
     {
-        int d = dptr[n].day - 1;
-        DemandNode *nPtr = dInTime.day[d];
-
-        if ( NULL == nPtr 
-             || nPtr->cnt >= DEMANDSIZE_PER_NODE )
-        {
-             DemandNode *newNode;
-
-             newNode = newDemandNode( DEMANDSIZE_PER_NODE );
-             if ( NULL == newNode )
-             {
-                 fprintf( stderr, "no memory for new demand node of size = %d\n", DEMANDSIZE_PER_NODE );
-                 exit( 1 );
-             }
-
-             newNode->next = nPtr;
-             if ( NULL != nPtr )
-             {
-                 nPtr->prev = newNode;
-             }
-
-             dInTime.day[d] = newNode;         
-
-             nPtr = dInTime.day[d];
-        }
-
-        nPtr->d[nPtr->cnt++] = &( dptr[n] );
+        fprintf( stderr, "error in new demand in time\n" );
+        exit( 1 );
     }
-
-    /*
-    for ( n = 0; n < 365; n++ )
-    {
-        DemandNode *nPtr;
-    
-        for ( nPtr = dInTime.day[n]; NULL != nPtr; nPtr = nPtr->next )
-        {
-            int i;
-
-            for ( i = 0; i < nPtr->cnt; i++ )
-            {
-                printf( "%s\t%d\t%02d:%02d\t%lf\n",
-                        nPtr->d[i]->geohash6, nPtr->d[i]->day, nPtr->d[i]->hh, nPtr->d[i]->mm, nPtr->d[i]->value );
-	    }
-        }
-    }
-     */
+ 
+    processDemandInTime( dit, dptr, nrDemand );
+ 
+    deleteDemandInTime( dit );
 
     // yup, I do not release memory as OS will claim it, there is no point to do so. :)
 
     return 0;
 }
+
+
+void
+deleteDemandNode( DemandNode * list )
+{
+    DemandNode *tmp;
+    DemandNode *item = list;
+
+    while ( NULL != item )
+    {
+        tmp = item;
+        item = item->next;
+ 
+        free( tmp );
+    }
+}
+
+void
+deleteDemandInTime( DemandInTime * dit )
+{
+    int i;
+
+    for ( i = 0; i < DAYS_IN_YEAR; i++ )
+    {
+        deleteDemandNode( dit->day[i] );  
+    }
+ 
+    for ( i = 0; i < HOURS_IN_YEAR; i++ )
+    {
+        deleteDemandNode( dit->hour[i] );  
+    }
+ 
+    for ( i = 0; i < MININTERVALS_IN_YEAR; i++ )
+    {
+        deleteDemandNode( dit->mininterval[i] );  
+    }
+ 
+    free( dit );   
+}
+
+
+void
+printDebugDemandNode( DemandNode * item )
+{
+    int i;
+
+    while ( NULL != item )
+    {
+        for ( i = 0; i < item->cnt; i++ )
+        {
+            printf( "%s,%02d,%02d:%02d,%lf\n", 
+                    item->d[i]->geohash6, 
+                    item->d[i]->day,
+                    item->d[i]->hh, 
+                    item->d[i]->mm, 
+                    item->d[i]->value );
+        }
+
+        item = item->next;
+    }
+}
+
+void
+printDebugDemandInTime( DemandInTime * dit )
+{
+    int dayIndex;
+    int hourIndex;
+
+    for ( dayIndex = 0; dayIndex < DAYS_IN_YEAR; dayIndex++ )
+    {
+        if ( NULL != dit->day[dayIndex] )
+        { 
+            printf( "---- day = %d\n", dayIndex + 1 );
+            printDebugDemandNode( dit->day[dayIndex] );    
+ 
+            for ( hourIndex = dayIndex * 24; hourIndex < dayIndex * 24 + 24; hourIndex++ )
+            {
+                if ( NULL != dit->hour[hourIndex] )
+                {
+                    printf( "-------- hour = %d\n", ( hourIndex % 24 ) + 1 );
+ 
+                    printDebugDemandNode( dit->hour[hourIndex] );
+                }
+            }
+        }
+    }
+}
+
+
+DemandInTime *
+newDemandInTime( void )
+{
+    DemandInTime *dit;
+    int           i;
+
+    dit = malloc( sizeof( *dit ) );
+    if ( NULL != dit )
+    {
+        for ( i = 0; i < DAYS_IN_YEAR; i++ )
+        {   
+            dit->day[i] = NULL;
+        } 
+
+        for ( i = 0; i < HOURS_IN_YEAR; i++ )
+        {
+            dit->hour[i] = NULL;
+        } 
+
+        for ( i = 0; i < MININTERVALS_IN_YEAR; i++ )
+        {
+            dit->mininterval[i] = NULL;
+        } 
+    }
+
+    return dit;
+}
+
+
+DemandNode *
+processDemandNode( DemandNode * list, Demand * dptr, int nrDemand )
+{
+    int         n;   
+    DemandNode *newNode;
+
+    for ( n = 0; n < nrDemand; n++ )
+    {
+        if ( NULL == list
+             || list->cnt >= DEMANDSIZE_PER_NODE )
+        {
+            newNode = newDemandNode( DEMANDSIZE_PER_NODE );
+            if ( NULL == newNode )
+            {
+	        fprintf( stderr, "no memory for new demand node of size = %d\n", DEMANDSIZE_PER_NODE );
+	        exit( 1 );
+            }
+
+            newNode->next = list;
+            if ( NULL != list )
+            {
+	        list->prev = newNode;
+            }
+
+            list = newNode;
+        }  
+
+        list->d[list->cnt++] = &( dptr[n] );
+    }
+
+    return list;
+}
+
+
+void
+processDemandInTime( DemandInTime * dit, Demand * dptr, int nrDemand )
+{
+    int n;
+    int dayIndex;
+    int hourIndex;
+    int minIntervalIndex;
+
+    for ( n = 0; n < nrDemand; n++ )
+    {
+        dayIndex  = dptr[n].day - 1;
+        hourIndex = dayIndex * 24 + dptr[n].hh - 1;
+        minIntervalIndex = hourIndex * 4 + ( dptr[n].mm / 15 ) - 1;
+
+        assert( dayIndex < DAYS_IN_YEAR );
+        assert( hourIndex < HOURS_IN_YEAR );
+        assert( minIntervalIndex < MININTERVALS_IN_YEAR );
+
+        dit->day[dayIndex] = processDemandNode( dit->day[dayIndex], &( dptr[n] ), 1 );
+        dit->hour[hourIndex] = processDemandNode( dit->hour[hourIndex], &( dptr[n] ), 1 );
+        dit->mininterval[minIntervalIndex] = processDemandNode( dit->mininterval[minIntervalIndex], &( dptr[n] ), 1 );
+    }
+}
+
 
 Demand *
 scanDemand( char * cptr, Demand * dptr )
