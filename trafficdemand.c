@@ -157,6 +157,8 @@ main( int argc, char * argv[] )
     }
  
     processDemandInTime( dit, dptr, nrDemand );
+
+    printDebugDemandInTime( dit );
  
     deleteDemandInTime( dit );
 
@@ -236,14 +238,14 @@ printDebugDemandInTime( DemandInTime * dit )
     {
         if ( NULL != dit->day[dayIndex] )
         { 
-            printf( "---- day = %d\n", dayIndex + 1 );
-            printDebugDemandNode( dit->day[dayIndex] );    
+            // printf( "---- day = %d\n", dayIndex + 1 );
+            // printDebugDemandNode( dit->day[dayIndex] );    
  
             for ( hourIndex = dayIndex * 24; hourIndex < dayIndex * 24 + 24; hourIndex++ )
             {
                 if ( NULL != dit->hour[hourIndex] )
                 {
-                    printf( "-------- hour = %d\n", ( hourIndex % 24 ) + 1 );
+                    // printf( "-------- hour = %d\n", ( hourIndex % 24 ) + 1 );
  
                     printDebugDemandNode( dit->hour[hourIndex] );
                 }
