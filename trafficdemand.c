@@ -1,6 +1,10 @@
 /*
- *  Copyright 2019, Chee Bin Hoh, All right reserved.
+ * Copyright 2019, Chee Bin Hoh, All right reserved.
+ *
+ * This program is built for programming challenge, https://www.aiforsea.com/traffic-management
+ *
  */
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,10 +13,18 @@
 #include <unistd.h>
 #include <assert.h>
 
-#define DEMANDSIZE_PER_NODE  500
-#define DAYS_IN_YEAR         365
-#define HOURS_IN_YEAR        ( DAYS_IN_YEAR * 24 )
-#define MININTERVALS_IN_YEAR  ( HOURS_IN_YEAR * 4 )
+
+enum 
+{
+    NUM_DEMAND_PER_NODE  = 500,
+    HOURS_IN_DAY         = 24,
+    DAYS_IN_YEAR         = 365,
+    HOURS_IN_YEAR        = DAYS_IN_YEAR * HOURS_IN_DAY,  
+    MININTERVALS_IN_YEAR = HOURS_IN_YEAR * 4
+};
+
+
+typedef struct demand Demand;
 
 struct demand
 {
@@ -23,7 +35,8 @@ struct demand
     double value;
 };
 
-typedef struct demand Demand;
+
+typedef struct demandnode DemandNode;
 
 struct demandnode
 {
@@ -33,7 +46,8 @@ struct demandnode
     Demand            *d[1];
 };
 
-typedef struct demandnode DemandNode;
+
+typedef struct demandintime DemandInTime;
 
 struct demandintime
 {
@@ -42,7 +56,6 @@ struct demandintime
     DemandNode * mininterval[MININTERVALS_IN_YEAR]; 
 };
 
-typedef struct demandintime DemandInTime;
 
 // functions...
 Demand *
@@ -61,10 +74,10 @@ void
 deleteDemandInTime( DemandInTime * dit ); 
 
 DemandNode *
-processDemandNode( DemandNode * list, Demand * dptr, int nrDemand );
+processDemandNode( DemandNode * list, Demand * dptr, long nrDemand );
 
 void
-processDemandInTime( DemandInTime * dit, Demand * dptr, int nrDemand );
+processDemandInTime( DemandInTime * dit, Demand * dptr, long nrDemand );
 
 void
 printDebugDemandInTime( DemandInTime * dit );
@@ -79,7 +92,6 @@ main( int argc, char * argv[] )
     Demand * base  = NULL;
     Demand * dptr  = NULL;
     long     nrDemand = 0; 
-    int      batchsize = 1000;
     int      n;
     int      ret;
     int      hh;
@@ -106,12 +118,12 @@ main( int argc, char * argv[] )
         {
             if ( NULL == base )
             {
-               base = malloc( batchsize * ( sizeof ( Demand ) ) );
-                dptr = base;
+               base = malloc( NUM_DEMAND_PER_NODE  * ( sizeof ( base[0] ) ) );
+               dptr = base;
             }
-            else if ( ( nrDemand % batchsize ) == 0 )
+            else if ( ( nrDemand % NUM_DEMAND_PER_NODE ) == 0 )
             {
-                dptr = realloc( base, ( nrDemand + batchsize ) * sizeof ( Demand )  );
+                dptr = realloc( base, ( nrDemand + NUM_DEMAND_PER_NODE ) * sizeof ( base[0] )  );
                 if ( dptr  == NULL )
                 {
                     free( base );
@@ -131,7 +143,6 @@ main( int argc, char * argv[] )
                 nrDemand++;
             }
         } // while still got next line
-
        
         if ( argc-- > 0 )
         {
@@ -148,7 +159,8 @@ main( int argc, char * argv[] )
         }
     } while ( 1 );
 
-    // demand in time
+
+    // sort all demands by time, day, hour and min intervals
     dit = newDemandInTime();
     if ( NULL == dit )
     {
@@ -169,10 +181,9 @@ main( int argc, char * argv[] )
 
 
 void
-deleteDemandNode( DemandNode * list )
+deleteDemandNode( DemandNode * item )
 {
     DemandNode *tmp;
-    DemandNode *item = list;
 
     while ( NULL != item )
     {
@@ -216,7 +227,7 @@ printDebugDemandNode( DemandNode * item )
     {
         for ( i = 0; i < item->cnt; i++ )
         {
-            printf( "%s,%02d,%02d:%02d,%lf\n", 
+            printf( "%s,%02d,%02d:%02d,%.16lf\n", 
                     item->d[i]->geohash6, 
                     item->d[i]->day,
                     item->d[i]->hh, 
@@ -228,26 +239,29 @@ printDebugDemandNode( DemandNode * item )
     }
 }
 
+
 void
 printDebugDemandInTime( DemandInTime * dit )
 {
     int dayIndex;
     int hourIndex;
+    int minIntervalIndex;
 
     for ( dayIndex = 0; dayIndex < DAYS_IN_YEAR; dayIndex++ )
     {
         if ( NULL != dit->day[dayIndex] )
         { 
-            // printf( "---- day = %d\n", dayIndex + 1 );
-            // printDebugDemandNode( dit->day[dayIndex] );    
- 
             for ( hourIndex = dayIndex * 24; hourIndex < dayIndex * 24 + 24; hourIndex++ )
             {
                 if ( NULL != dit->hour[hourIndex] )
                 {
-                    // printf( "-------- hour = %d\n", ( hourIndex % 24 ) + 1 );
- 
-                    printDebugDemandNode( dit->hour[hourIndex] );
+                    for ( minIntervalIndex = hourIndex * 4; minIntervalIndex < hourIndex * 4 + 4; minIntervalIndex++ )
+                    {
+                         if ( NULL != dit->mininterval[minIntervalIndex] )
+                         {
+                             printDebugDemandNode( dit->mininterval[minIntervalIndex] );
+                         }
+                    }          
                 }
             }
         }
@@ -285,20 +299,20 @@ newDemandInTime( void )
 
 
 DemandNode *
-processDemandNode( DemandNode * list, Demand * dptr, int nrDemand )
+processDemandNode( DemandNode * list, Demand * dptr, long nrDemand )
 {
-    int         n;   
+    int         i;   
     DemandNode *newNode;
 
-    for ( n = 0; n < nrDemand; n++ )
+    for ( i = 0; i < nrDemand; i++ )
     {
         if ( NULL == list
-             || list->cnt >= DEMANDSIZE_PER_NODE )
+             || list->cnt >= NUM_DEMAND_PER_NODE )
         {
-            newNode = newDemandNode( DEMANDSIZE_PER_NODE );
+            newNode = newDemandNode( NUM_DEMAND_PER_NODE );
             if ( NULL == newNode )
             {
-	        fprintf( stderr, "no memory for new demand node of size = %d\n", DEMANDSIZE_PER_NODE );
+	        fprintf( stderr, "no memory for new demand node of size = %d\n", NUM_DEMAND_PER_NODE );
 	        exit( 1 );
             }
 
@@ -311,7 +325,7 @@ processDemandNode( DemandNode * list, Demand * dptr, int nrDemand )
             list = newNode;
         }  
 
-        list->d[list->cnt++] = &( dptr[n] );
+        list->d[list->cnt++] = &( dptr[i] );
     }
 
     return list;
@@ -319,26 +333,28 @@ processDemandNode( DemandNode * list, Demand * dptr, int nrDemand )
 
 
 void
-processDemandInTime( DemandInTime * dit, Demand * dptr, int nrDemand )
+processDemandInTime( DemandInTime * dit, Demand * dptr, long nrDemand )
 {
-    int n;
+    int i;
     int dayIndex;
     int hourIndex;
     int minIntervalIndex;
 
-    for ( n = 0; n < nrDemand; n++ )
+    for ( i = 0; i < nrDemand; i++ )
     {
-        dayIndex  = dptr[n].day - 1;
-        hourIndex = dayIndex * 24 + dptr[n].hh - 1;
-        minIntervalIndex = hourIndex * 4 + ( dptr[n].mm / 15 ) - 1;
+        // day is started at 1, hour at 0 and min interval at 0 from import data
+
+        dayIndex  = dptr[i].day - 1;  
+        hourIndex = dayIndex * 24 + dptr[i].hh;
+        minIntervalIndex = hourIndex * 4 + ( dptr[i].mm / 15 );
 
         assert( dayIndex < DAYS_IN_YEAR );
         assert( hourIndex < HOURS_IN_YEAR );
         assert( minIntervalIndex < MININTERVALS_IN_YEAR );
 
-        dit->day[dayIndex] = processDemandNode( dit->day[dayIndex], &( dptr[n] ), 1 );
-        dit->hour[hourIndex] = processDemandNode( dit->hour[hourIndex], &( dptr[n] ), 1 );
-        dit->mininterval[minIntervalIndex] = processDemandNode( dit->mininterval[minIntervalIndex], &( dptr[n] ), 1 );
+        dit->day[dayIndex] = processDemandNode( dit->day[dayIndex], &( dptr[i] ), 1 );
+        dit->hour[hourIndex] = processDemandNode( dit->hour[hourIndex], &( dptr[i] ), 1 );
+        dit->mininterval[minIntervalIndex] = processDemandNode( dit->mininterval[minIntervalIndex], &( dptr[i] ), 1 );
     }
 }
 
