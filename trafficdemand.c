@@ -108,6 +108,7 @@ processDemandInGeohash6( DemandInGeohash6 * digh6[], int size, Demand * d, long 
 void
 deleteDemandInGeohash6( DemandInGeohash6 * digh6[], int size );
 
+
 int
 main( int argc, char * argv[] )
 { 
@@ -205,6 +206,7 @@ main( int argc, char * argv[] )
     return 0;
 }
 
+
 void
 deleteDemandInGeohash6( DemandInGeohash6 * digh6[], int size )
 {
@@ -224,6 +226,7 @@ deleteDemandInGeohash6( DemandInGeohash6 * digh6[], int size )
     }
 }
 
+
 void
 processDemandInGeohash6( DemandInGeohash6 * digh6[], int size, Demand * d, long nrDemand )
 {
@@ -232,6 +235,7 @@ processDemandInGeohash6( DemandInGeohash6 * digh6[], int size, Demand * d, long 
         insertDemandInGeohash6( digh6, size, d++ );
     }
 }
+
 
 DemandInGeohash6 *
 insertDemandInGeohash6( DemandInGeohash6 * digh6[], int size, Demand * d)
@@ -270,6 +274,7 @@ insertDemandInGeohash6( DemandInGeohash6 * digh6[], int size, Demand * d)
 
     return hashItem;
 }
+
 
 long
 getHashValueOfString( char * s )
