@@ -20,7 +20,9 @@ enum
     HOURS_IN_DAY         = 24,
     DAYS_IN_YEAR         = 365,
     HOURS_IN_YEAR        = DAYS_IN_YEAR * HOURS_IN_DAY,  
-    MININTERVALS_IN_YEAR = HOURS_IN_YEAR * 4
+    MININTERVALS_IN_YEAR = HOURS_IN_YEAR * 4,
+    HASH_MULTIPLIER      = 37,
+    NUM_HASH_SIZE        = 5000
 };
 
 
@@ -40,10 +42,10 @@ typedef struct demandnode DemandNode;
 
 struct demandnode
 {
-    struct demandnode *next;
-    struct demandnode *prev;
-    long               cnt;
-    Demand            *d[1];
+    DemandNode *next;
+    DemandNode *prev;
+    long        cnt;
+    Demand     *d[1]; //varying size, allocated by malloc
 };
 
 
@@ -54,6 +56,15 @@ struct demandintime
     DemandNode * day[DAYS_IN_YEAR];
     DemandNode * hour[HOURS_IN_YEAR];
     DemandNode * mininterval[MININTERVALS_IN_YEAR]; 
+};
+
+typedef struct demandingeohash6 DemandInGeohash6; 
+
+struct demandingeohash6
+{
+    DemandNode       * d;
+    DemandInGeohash6 * next;
+    char               geohash6[7];
 };
 
 
@@ -85,19 +96,32 @@ printDebugDemandInTime( DemandInTime * dit );
 void
 printDebugDemandNode( DemandNode * list );
 
+long
+getHashValueOfString( char * s );
+
+DemandInGeohash6 *
+insertDemandInGeohash6( DemandInGeohash6 * digh6[], int size, Demand * d);
+
+void
+processDemandInGeohash6( DemandInGeohash6 * digh6[], int size, Demand * d, long nrDemand );
+
+void
+deleteDemandInGeohash6( DemandInGeohash6 * digh6[], int size );
+
 int
 main( int argc, char * argv[] )
 { 
-    DemandInTime *dit = NULL;
-    Demand * base  = NULL;
-    Demand * dptr  = NULL;
-    long     nrDemand = 0; 
-    int      n;
-    int      ret;
-    int      hh;
-    int      mm;
-    char     buf[BUFSIZ];
-    FILE *   file = stdin;
+    DemandInTime *    dit = NULL;
+    Demand *          base  = NULL;
+    Demand *          dptr  = NULL;
+    long              nrDemand = 0; 
+    int               n;
+    int               ret;
+    int               hh;
+    int               mm;
+    char              buf[BUFSIZ];
+    FILE *            file = stdin;
+    DemandInGeohash6 *digh6[NUM_HASH_SIZE] = { NULL };    
 
     argc -= optind;
     argv += optind;   
@@ -170,8 +194,10 @@ main( int argc, char * argv[] )
  
     processDemandInTime( dit, dptr, nrDemand );
 
-    printDebugDemandInTime( dit );
- 
+    processDemandInGeohash6( digh6, NUM_HASH_SIZE, dptr, nrDemand );
+
+    deleteDemandInGeohash6( digh6, NUM_HASH_SIZE );
+
     deleteDemandInTime( dit );
 
     // yup, I do not release memory as OS will claim it, there is no point to do so. :)
@@ -179,6 +205,86 @@ main( int argc, char * argv[] )
     return 0;
 }
 
+void
+deleteDemandInGeohash6( DemandInGeohash6 * digh6[], int size )
+{
+    int               i;
+    DemandInGeohash6 *hashItem;
+    DemandInGeohash6 *next;
+
+    for ( i = 0; i < size; i++ )
+    {
+        for ( hashItem = digh6[i]; NULL != hashItem; hashItem = next )
+        {
+            next = hashItem->next;
+            
+            deleteDemandNode( hashItem->d );
+            free( hashItem );   
+        }
+    }
+}
+
+void
+processDemandInGeohash6( DemandInGeohash6 * digh6[], int size, Demand * d, long nrDemand )
+{
+    while ( nrDemand-- > 0 )
+    {
+        insertDemandInGeohash6( digh6, size, d++ );
+    }
+}
+
+DemandInGeohash6 *
+insertDemandInGeohash6( DemandInGeohash6 * digh6[], int size, Demand * d)
+{
+    long              hashkey;
+    DemandInGeohash6 *hashItem;
+ 
+    hashkey = getHashValueOfString( d->geohash6 ); 
+
+    assert( hashkey >= 0 && hashkey < size );
+
+    for ( hashItem = digh6[hashkey]; hashItem != NULL; hashItem = hashItem->next )
+    {
+        if ( strcmp( hashItem->geohash6, d->geohash6 ) == 0 )
+        {
+	    break;
+	}
+    }
+
+    if ( NULL == hashItem )
+    {
+        hashItem = malloc( sizeof( * hashItem ) );
+	if ( NULL == hashItem )
+	{
+	    fprintf( stderr, "malloc fail" );
+	    exit( 1 );
+	}
+
+	strncpy( hashItem->geohash6, d->geohash6, sizeof( hashItem->geohash6 ) );
+	hashItem->d = NULL;
+	hashItem->next = digh6[hashkey];
+	digh6[hashkey] = hashItem;
+    }
+
+    hashItem->d = processDemandNode( hashItem->d, d, 1 );
+
+    return hashItem;
+}
+
+long
+getHashValueOfString( char * s )
+{
+    long result;
+    int c;
+
+    result = 0;
+    while ( ( c = *s++ )  != '\0' )
+    {
+        result = result * HASH_MULTIPLIER + c;   
+    }
+
+    return result % NUM_HASH_SIZE;
+}
 
 void
 deleteDemandNode( DemandNode * item )
@@ -193,6 +299,7 @@ deleteDemandNode( DemandNode * item )
         free( tmp );
     }
 }
+
 
 void
 deleteDemandInTime( DemandInTime * dit )
