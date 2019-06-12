@@ -91,6 +91,9 @@ void
 processDemandInTime( DemandInTime * dit, Demand * dptr, long nrDemand );
 
 void
+processDemandNodeInTime( DemandInTime * dit, DemandNode *list );
+
+void
 printDebugDemandInTime( DemandInTime * dit );
 
 void
@@ -100,29 +103,35 @@ long
 getHashValueOfString( char * s );
 
 DemandInGeohash6 *
-insertDemandInGeohash6( DemandInGeohash6 * digh6[], int size, Demand * d);
+insertDemandInGeohash6( DemandInGeohash6 ** digh6, Demand * d);
 
 void
-processDemandInGeohash6( DemandInGeohash6 * digh6[], int size, Demand * d, long nrDemand );
+processDemandInGeohash6( DemandInGeohash6 ** digh6, Demand * d, long nrDemand );
 
 void
-deleteDemandInGeohash6( DemandInGeohash6 * digh6[], int size );
+printDebugDemandInGeohash6( DemandInGeohash6 ** digh6 );
+
+DemandInGeohash6 * *
+newDemandInGeohash6( void );
+
+void
+deleteDemandInGeohash6( DemandInGeohash6 ** digh6 );
 
 
 int
 main( int argc, char * argv[] )
 { 
-    DemandInTime *    dit = NULL;
-    Demand *          base  = NULL;
-    Demand *          dptr  = NULL;
-    long              nrDemand = 0; 
-    int               n;
-    int               ret;
-    int               hh;
-    int               mm;
-    char              buf[BUFSIZ];
-    FILE *            file = stdin;
-    DemandInGeohash6 *digh6[NUM_HASH_SIZE] = { NULL };    
+    DemandInTime *      dit = NULL;
+    Demand *            base  = NULL;
+    Demand *            dptr  = NULL;
+    long                nrDemand = 0; 
+    int                 n;
+    int                 ret;
+    int                 hh;
+    int                 mm;
+    char                buf[BUFSIZ];
+    FILE *              file = stdin;
+    DemandInGeohash6 ** digh6 = NULL;
 
     argc -= optind;
     argv += optind;   
@@ -187,17 +196,14 @@ main( int argc, char * argv[] )
 
     // sort all demands by time, day, hour and min intervals
     dit = newDemandInTime();
-    if ( NULL == dit )
-    {
-        fprintf( stderr, "error in new demand in time\n" );
-        exit( 1 );
-    }
  
     processDemandInTime( dit, dptr, nrDemand );
 
-    processDemandInGeohash6( digh6, NUM_HASH_SIZE, dptr, nrDemand );
+    digh6 = newDemandInGeohash6();
 
-    deleteDemandInGeohash6( digh6, NUM_HASH_SIZE );
+    processDemandInGeohash6( digh6, dptr, nrDemand );
+ 
+    deleteDemandInGeohash6( digh6 );
 
     deleteDemandInTime( dit );
 
@@ -207,14 +213,66 @@ main( int argc, char * argv[] )
 }
 
 
+
+DemandInGeohash6 * *
+newDemandInGeohash6( void )
+{
+    DemandInGeohash6 ** digh6 = NULL;
+    int                 i;
+
+    digh6 = malloc( NUM_HASH_SIZE * sizeof( DemandInGeohash6 * ) );
+    if ( NULL == digh6 )
+    {
+        fprintf( stderr, "no memory for new DemandInGeohash6\n" );
+        exit( 1 );
+    }
+
+    for ( i = 0; i < NUM_HASH_SIZE; i++ )
+    {
+        digh6[i] = NULL;
+    } 
+
+    return digh6;
+}
+
+
 void
-deleteDemandInGeohash6( DemandInGeohash6 * digh6[], int size )
+printDebugDemandInGeohash6( DemandInGeohash6 ** digh6 )
+{
+     
+    int               i;
+    DemandInGeohash6 *hashItem;
+
+    for ( i = 0; i < NUM_HASH_SIZE; i++ )
+    {
+        for ( hashItem = digh6[i]; NULL != hashItem; hashItem = hashItem->next )
+        {
+            DemandInTime * dit;
+            DemandNode   * list;
+
+            dit = newDemandInTime();
+            
+            for ( list = hashItem->d; NULL != list; list = list->next )
+            {
+                processDemandNodeInTime( dit, list );
+            }
+
+            printDebugDemandInTime( dit );
+
+	    deleteDemandInTime( dit );
+        }
+    }
+}
+
+
+void
+deleteDemandInGeohash6( DemandInGeohash6 * * digh6 )
 {
     int               i;
     DemandInGeohash6 *hashItem;
     DemandInGeohash6 *next;
 
-    for ( i = 0; i < size; i++ )
+    for ( i = 0; i < NUM_HASH_SIZE; i++ )
     {
         for ( hashItem = digh6[i]; NULL != hashItem; hashItem = next )
         {
@@ -224,28 +282,30 @@ deleteDemandInGeohash6( DemandInGeohash6 * digh6[], int size )
             free( hashItem );   
         }
     }
+
+    free( digh6 );
 }
 
 
 void
-processDemandInGeohash6( DemandInGeohash6 * digh6[], int size, Demand * d, long nrDemand )
+processDemandInGeohash6( DemandInGeohash6 ** digh6, Demand * d, long nrDemand )
 {
     while ( nrDemand-- > 0 )
     {
-        insertDemandInGeohash6( digh6, size, d++ );
+        insertDemandInGeohash6( digh6, d++ );
     }
 }
 
 
 DemandInGeohash6 *
-insertDemandInGeohash6( DemandInGeohash6 * digh6[], int size, Demand * d)
+insertDemandInGeohash6( DemandInGeohash6 ** digh6, Demand * d)
 {
     long              hashkey;
     DemandInGeohash6 *hashItem;
  
     hashkey = getHashValueOfString( d->geohash6 ); 
 
-    assert( hashkey >= 0 && hashkey < size );
+    assert( hashkey >= 0 && hashkey < NUM_HASH_SIZE );
 
     for ( hashItem = digh6[hashkey]; hashItem != NULL; hashItem = hashItem->next )
     {
@@ -441,6 +501,18 @@ processDemandNode( DemandNode * list, Demand * dptr, long nrDemand )
     }
 
     return list;
+}
+
+
+void
+processDemandNodeInTime( DemandInTime * dit, DemandNode *list )
+{
+    int i;
+
+    for ( i = 0; i < list->cnt; i++ )
+    {
+        processDemandInTime( dit, list->d[i], 1 );
+    }
 }
 
 
