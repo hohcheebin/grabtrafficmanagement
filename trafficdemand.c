@@ -68,9 +68,15 @@ struct demandingeohash6
 };
 
 
-// functions...
 Demand *
 scanDemand( char * cptr, Demand * dptr );
+
+
+/* Start of DemandInTime API 
+ * 
+ * DemandInTime is ADT that allows us to store and organize demands by day and hour 
+ * and min interval.
+ */
 
 DemandInTime *
 newDemandInTime( void );
@@ -82,10 +88,12 @@ void
 processDemandInTime( DemandInTime * dit, Demand * dptr, long nrDemand );
 
 void
-processDemandNodeInTime( DemandInTime * dit, DemandNode *list );
+processDemandNodeInTime( DemandInTime * dit, DemandNode * list );
 
 void
 printDebugDemandInTime( DemandInTime * dit );
+
+/* End of DemandInTime API */
 
 
 /* Start of DemandNode API 
