@@ -225,6 +225,23 @@ main( int argc, char * argv[] )
 }
 
 
+/* Start of DemandInGeohash6 API */
+
+long
+getHashValueOfString( char * s )
+{
+    long result;
+    int  c;
+
+    result = 0;
+    while ( ( c = *s++ )  != '\0' )
+    {
+        result = result * HASH_MULTIPLIER + c;   
+    }
+
+    return result % NUM_HASH_SIZE;
+}
+
 
 DemandInGeohash6 * *
 newDemandInGeohash6( void )
@@ -347,21 +364,8 @@ printDebugDemandInGeohash6( DemandInGeohash6 ** digh6 )
     }
 }
 
+/* End of DemandInGeohash6 API */
 
-long
-getHashValueOfString( char * s )
-{
-    long result;
-    int c;
-
-    result = 0;
-    while ( ( c = *s++ )  != '\0' )
-    {
-        result = result * HASH_MULTIPLIER + c;   
-    }
-
-    return result % NUM_HASH_SIZE;
-}
 
 void
 deleteDemandNode( DemandNode * item )
