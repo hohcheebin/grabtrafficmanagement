@@ -135,6 +135,9 @@ void
 deleteDemandInGeohash6( DemandInGeohash6 * * digh6 );
 
 DemandInGeohash6 *
+insertGeohash6( DemandInGeohash6 * * digh6, char * geohash6, int createIfNotExist  );
+
+DemandInGeohash6 *
 insertDemandInGeohash6( DemandInGeohash6 * * digh6, Demand * d, int createIfNotExist );
 
 void
@@ -149,17 +152,17 @@ printDebugDemandInGeohash6( DemandInGeohash6 * * digh6 );
 int
 main( int argc, char * argv[] )
 {
-    char               * geohash6 = "";
-    Demand *             base  = NULL;
-    Demand *             dptr  = NULL;
-    long                 nrDemand = 0; 
-    int                  n;
-    int                  ret;
-    int                  hh;
-    int                  mm;
-    int                  opt;
-    char                 buf[BUFSIZ];
-    FILE *               file = stdin;
+    char   * geohash6 = NULL;
+    Demand * base  = NULL;
+    Demand * dptr  = NULL;
+    long     nrDemand = 0; 
+    int      n;
+    int      ret;
+    int      hh;
+    int      mm;
+    int      opt;
+    char     buf[BUFSIZ];
+    FILE *   file = stdin;
 
     while ( ( opt = getopt( argc, argv, "g:" ) ) != -1 )
     {
@@ -238,8 +241,29 @@ main( int argc, char * argv[] )
 
     {
         DemandInGeohash6 * * glist = NULL;
+        int                  hasFilterGeohash6 = 0;
+
+
+        hasFilterGeohash6 = ( NULL != geohash6 );
 
         glist = newDemandInGeohash6();
+        
+        if ( hasFilterGeohash6 )
+        {
+            char *tok = NULL;
+
+            tok = strtok( geohash6, "," );
+            while ( NULL != tok )
+            {
+                insertGeohash6( glist, tok, 1 );
+   
+                tok = strtok( NULL, "," );
+            }
+        }
+
+        processDemandInGeohash6( glist, dptr, nrDemand, ! hasFilterGeohash6 );
+
+       // printDebugDemandInGeohash6( glist );
 
         deleteDemandInGeohash6( glist );
     }
@@ -329,7 +353,7 @@ printDebugDemandNode( DemandNode * item )
     {
         for ( i = 0; i < item->cnt; i++ )
         {
-            printf( "%s,%02d,%02d:%02d,%.16lf\n", 
+            printf( "%s,%02d,%02d:%02d,%.18lf\n", 
                     item->d[i]->geohash6, 
                     item->d[i]->day,
                     item->d[i]->hh, 
@@ -407,38 +431,50 @@ deleteDemandInGeohash6( DemandInGeohash6 * * digh6 )
 
 
 DemandInGeohash6 *
-insertDemandInGeohash6( DemandInGeohash6 * * digh6, Demand * d, int createIfNotExist )
+insertGeohash6( DemandInGeohash6 * * digh6, char * geohash6, int createIfNotExist  )
 {
     long               hashkey;
     DemandInGeohash6 * hashItem = NULL;
  
-    hashkey = getHashValueOfString( d->geohash6 ); 
+    hashkey = getHashValueOfString( geohash6 ); 
 
     assert( hashkey >= 0 && hashkey < NUM_HASH_SIZE );
 
     for ( hashItem = digh6[hashkey]; hashItem != NULL; hashItem = hashItem->next )
-    {
-        if ( strcmp( hashItem->geohash6, d->geohash6 ) == 0 )
-        {
-	    break;
-	}
+    {   
+        if ( strcmp( hashItem->geohash6, geohash6 ) == 0 )
+        {   
+            break;
+        }
     }
-
+    
     if ( NULL == hashItem 
-        && createIfNotExist )
+         && createIfNotExist )
     {
         hashItem = malloc( sizeof( * hashItem ) );
-	if ( NULL == hashItem )
-	{
-	    fprintf( stderr, "failed to allocate memory for more DemandInGeohash6\n" );
-	    exit( 1 );
-	}
-
-	strncpy( hashItem->geohash6, d->geohash6, sizeof( hashItem->geohash6 ) );
-	hashItem->d = NULL;
-	hashItem->next = digh6[hashkey];
-	digh6[hashkey] = hashItem;
+        if ( NULL == hashItem )
+        {   
+            fprintf( stderr, "failed to allocate memory for more DemandInGeohash6\n" );
+            exit( 1 );
+        }
+        
+        strncpy( hashItem->geohash6, geohash6, sizeof( hashItem->geohash6 ) );
+        hashItem->d = NULL;
+        hashItem->next = digh6[hashkey];
+        digh6[hashkey] = hashItem;
     }
+
+    return hashItem;
+}
+
+
+DemandInGeohash6 *
+insertDemandInGeohash6( DemandInGeohash6 * * digh6, Demand * d, int createIfNotExist )
+{
+    DemandInGeohash6 * hashItem;
+
+    
+    hashItem = insertGeohash6( digh6, d->geohash6, createIfNotExist );
 
     if ( NULL != hashItem )
     {
