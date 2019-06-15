@@ -148,18 +148,32 @@ printDebugDemandInGeohash6( DemandInGeohash6 * * digh6 );
 
 int
 main( int argc, char * argv[] )
-{ 
-    DemandInTime *      dit = NULL;
-    Demand *            base  = NULL;
-    Demand *            dptr  = NULL;
-    long                nrDemand = 0; 
-    int                 n;
-    int                 ret;
-    int                 hh;
-    int                 mm;
-    char                buf[BUFSIZ];
-    FILE *              file = stdin;
-    DemandInGeohash6 ** digh6 = NULL;
+{
+    char               * geohash6 = NULL; 
+    Demand *             base  = NULL;
+    Demand *             dptr  = NULL;
+    long                 nrDemand = 0; 
+    int                  n;
+    int                  ret;
+    int                  hh;
+    int                  mm;
+    int                  opt;
+    char                 buf[BUFSIZ];
+    FILE *               file = stdin;
+
+    while ( ( opt = getopt( argc, argv, "g:" ) ) != -1 )
+    {
+        switch ( opt )
+        {
+            case 'g':
+                geohash6 = optarg;
+                break;
+
+            default:
+                fprintf( stderr, "invalid option (%c) and argument\n", opt );
+                exit( 1 );
+        }
+    }
 
     argc -= optind;
     argv += optind;   
@@ -222,22 +236,24 @@ main( int argc, char * argv[] )
     } while ( 1 );
 
 
-    /*
-    // sort all demands by time, day, hour and min intervals
-    dit = newDemandInTime();
+    {
+        DemandNode         * dlist = NULL;
+        DemandInTime       * dit;
+        DemandInGeohash6 * * digh6;
+    
+        dit = newDemandInTime();
+        processDemandInTime( dit, dptr, nrDemand );
+
+        digh6 = newDemandInGeohash6();
+        processDemandInGeohash6( digh6, dptr, nrDemand );
+
+
+      
  
-    processDemandInTime( dit, dptr, nrDemand );
+        deleteDemandInGeohash6( digh6 );
 
-    digh6 = newDemandInGeohash6();
-
-    processDemandInGeohash6( digh6, dptr, nrDemand );
-
-    printDebugDemandInGeohash6( digh6 );
- 
-    deleteDemandInGeohash6( digh6 );
-
-    deleteDemandInTime( dit );
-    */
+        deleteDemandInTime( dit );
+    }
 
     // yup, I do not release memory as OS will claim it, there is no point to do so. :)
 
