@@ -101,7 +101,7 @@ printDebugDemandInTime( DemandInTime * dit );
  */
 
 DemandNode *
-newDemandNode( size_t num );
+newDemandNode( void );
 
 void
 deleteDemandNode( DemandNode * list );
@@ -135,10 +135,10 @@ void
 deleteDemandInGeohash6( DemandInGeohash6 * * digh6 );
 
 DemandInGeohash6 *
-insertDemandInGeohash6( DemandInGeohash6 * * digh6, Demand * d);
+insertDemandInGeohash6( DemandInGeohash6 * * digh6, Demand * d, int createIfNotExist );
 
 void
-processDemandInGeohash6( DemandInGeohash6 * * digh6, Demand * d, long nrDemand );
+processDemandInGeohash6( DemandInGeohash6 * * digh6, Demand * d, long nrDemand, int createIfNotExist );
 
 void
 printDebugDemandInGeohash6( DemandInGeohash6 * * digh6 );
@@ -149,7 +149,7 @@ printDebugDemandInGeohash6( DemandInGeohash6 * * digh6 );
 int
 main( int argc, char * argv[] )
 {
-    char               * geohash6 = NULL; 
+    char               * geohash6 = "";
     Demand *             base  = NULL;
     Demand *             dptr  = NULL;
     long                 nrDemand = 0; 
@@ -237,22 +237,11 @@ main( int argc, char * argv[] )
 
 
     {
-        DemandNode         * dlist = NULL;
-        DemandInTime       * dit;
-        DemandInGeohash6 * * digh6;
-    
-        dit = newDemandInTime();
-        processDemandInTime( dit, dptr, nrDemand );
+        DemandInGeohash6 * * glist = NULL;
 
-        digh6 = newDemandInGeohash6();
-        processDemandInGeohash6( digh6, dptr, nrDemand );
+        glist = newDemandInGeohash6();
 
-
-      
- 
-        deleteDemandInGeohash6( digh6 );
-
-        deleteDemandInTime( dit );
+        deleteDemandInGeohash6( glist );
     }
 
     // yup, I do not release memory as OS will claim it, there is no point to do so. :)
@@ -264,13 +253,13 @@ main( int argc, char * argv[] )
 /* Start of DemandNode API */
 
 DemandNode *
-newDemandNode( size_t num )
+newDemandNode( void )
 {
     DemandNode * newNode;
 
     /* reduce by 1 because DemandNode already contains 1 element for the array
      */
-    newNode = malloc( sizeof( DemandNode ) + ( ( num - 1 ) * ( sizeof( Demand * ) ) ) );
+    newNode = malloc( sizeof( DemandNode ) + ( ( NUM_DEMAND_PER_NODE - 1 ) * ( sizeof( Demand * ) ) ) );
     if ( NULL == newNode )
     {
         fprintf( stderr, "failed to allocate memory for more DemandNode\n" );
@@ -313,7 +302,7 @@ processDemandNode( DemandNode * list, Demand * dptr, long nrDemand )
         if ( NULL == list
              || list->cnt >= NUM_DEMAND_PER_NODE )
         {
-            newNode = newDemandNode( NUM_DEMAND_PER_NODE );
+            newNode = newDemandNode();
 
             newNode->next = list;
             if ( NULL != list )
@@ -418,10 +407,10 @@ deleteDemandInGeohash6( DemandInGeohash6 * * digh6 )
 
 
 DemandInGeohash6 *
-insertDemandInGeohash6( DemandInGeohash6 * * digh6, Demand * d)
+insertDemandInGeohash6( DemandInGeohash6 * * digh6, Demand * d, int createIfNotExist )
 {
     long               hashkey;
-    DemandInGeohash6 * hashItem;
+    DemandInGeohash6 * hashItem = NULL;
  
     hashkey = getHashValueOfString( d->geohash6 ); 
 
@@ -435,7 +424,8 @@ insertDemandInGeohash6( DemandInGeohash6 * * digh6, Demand * d)
 	}
     }
 
-    if ( NULL == hashItem )
+    if ( NULL == hashItem 
+        && createIfNotExist )
     {
         hashItem = malloc( sizeof( * hashItem ) );
 	if ( NULL == hashItem )
@@ -450,18 +440,21 @@ insertDemandInGeohash6( DemandInGeohash6 * * digh6, Demand * d)
 	digh6[hashkey] = hashItem;
     }
 
-    hashItem->d = processDemandNode( hashItem->d, d, 1 );
+    if ( NULL != hashItem )
+    {
+        hashItem->d = processDemandNode( hashItem->d, d, 1 );
+    }
 
     return hashItem;
 }
 
 
 void
-processDemandInGeohash6( DemandInGeohash6 * * digh6, Demand * d, long nrDemand )
+processDemandInGeohash6( DemandInGeohash6 * * digh6, Demand * d, long nrDemand, int createIfNotExist )
 {
     while ( nrDemand-- > 0 )
     {
-        insertDemandInGeohash6( digh6, d++ );
+        insertDemandInGeohash6( digh6, d++, createIfNotExist );
     }
 }
 
@@ -706,5 +699,6 @@ scanDemand( char * cptr, Demand * dptr )
 
     return dptr;
 }
+
 
 
