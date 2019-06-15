@@ -270,6 +270,55 @@ deleteDemandInGeohash6( DemandInGeohash6 * * digh6 )
 }
 
 
+DemandInGeohash6 *
+insertDemandInGeohash6( DemandInGeohash6 * * digh6, Demand * d)
+{
+    long               hashkey;
+    DemandInGeohash6 * hashItem;
+ 
+    hashkey = getHashValueOfString( d->geohash6 ); 
+
+    assert( hashkey >= 0 && hashkey < NUM_HASH_SIZE );
+
+    for ( hashItem = digh6[hashkey]; hashItem != NULL; hashItem = hashItem->next )
+    {
+        if ( strcmp( hashItem->geohash6, d->geohash6 ) == 0 )
+        {
+	    break;
+	}
+    }
+
+    if ( NULL == hashItem )
+    {
+        hashItem = malloc( sizeof( * hashItem ) );
+	if ( NULL == hashItem )
+	{
+	    fprintf( stderr, "failed to allocate new memory for DemandInGeohash6\n" );
+	    exit( 1 );
+	}
+
+	strncpy( hashItem->geohash6, d->geohash6, sizeof( hashItem->geohash6 ) );
+	hashItem->d = NULL;
+	hashItem->next = digh6[hashkey];
+	digh6[hashkey] = hashItem;
+    }
+
+    hashItem->d = processDemandNode( hashItem->d, d, 1 );
+
+    return hashItem;
+}
+
+
+void
+processDemandInGeohash6( DemandInGeohash6 * * digh6, Demand * d, long nrDemand )
+{
+    while ( nrDemand-- > 0 )
+    {
+        insertDemandInGeohash6( digh6, d++ );
+    }
+}
+
+
 void
 printDebugDemandInGeohash6( DemandInGeohash6 ** digh6 )
 {
@@ -296,55 +345,6 @@ printDebugDemandInGeohash6( DemandInGeohash6 ** digh6 )
 	    deleteDemandInTime( dit );
         }
     }
-}
-
-
-void
-processDemandInGeohash6( DemandInGeohash6 ** digh6, Demand * d, long nrDemand )
-{
-    while ( nrDemand-- > 0 )
-    {
-        insertDemandInGeohash6( digh6, d++ );
-    }
-}
-
-
-DemandInGeohash6 *
-insertDemandInGeohash6( DemandInGeohash6 ** digh6, Demand * d)
-{
-    long              hashkey;
-    DemandInGeohash6 *hashItem;
- 
-    hashkey = getHashValueOfString( d->geohash6 ); 
-
-    assert( hashkey >= 0 && hashkey < NUM_HASH_SIZE );
-
-    for ( hashItem = digh6[hashkey]; hashItem != NULL; hashItem = hashItem->next )
-    {
-        if ( strcmp( hashItem->geohash6, d->geohash6 ) == 0 )
-        {
-	    break;
-	}
-    }
-
-    if ( NULL == hashItem )
-    {
-        hashItem = malloc( sizeof( * hashItem ) );
-	if ( NULL == hashItem )
-	{
-	    fprintf( stderr, "malloc fail" );
-	    exit( 1 );
-	}
-
-	strncpy( hashItem->geohash6, d->geohash6, sizeof( hashItem->geohash6 ) );
-	hashItem->d = NULL;
-	hashItem->next = digh6[hashkey];
-	digh6[hashkey] = hashItem;
-    }
-
-    hashItem->d = processDemandNode( hashItem->d, d, 1 );
-
-    return hashItem;
 }
 
 
