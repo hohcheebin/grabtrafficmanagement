@@ -229,13 +229,13 @@ main( int argc, char * argv[] )
 DemandInGeohash6 * *
 newDemandInGeohash6( void )
 {
-    DemandInGeohash6 ** digh6 = NULL;
-    int                 i;
+    DemandInGeohash6 * * digh6 = NULL;
+    int                  i;
 
     digh6 = malloc( NUM_HASH_SIZE * sizeof( DemandInGeohash6 * ) );
     if ( NULL == digh6 )
     {
-        fprintf( stderr, "no memory for new DemandInGeohash6\n" );
+        fprintf( stderr, "failed to allocte memory for new DemandInGeohash6\n" );
         exit( 1 );
     }
 
@@ -245,6 +245,28 @@ newDemandInGeohash6( void )
     } 
 
     return digh6;
+}
+
+
+void
+deleteDemandInGeohash6( DemandInGeohash6 * * digh6 )
+{
+    int                i;
+    DemandInGeohash6 * hashItem;  
+    DemandInGeohash6 * next;
+
+    for ( i = 0; i < NUM_HASH_SIZE; i++ )
+    {
+        for ( hashItem = digh6[i]; NULL != hashItem; hashItem = next )
+        {
+            next = hashItem->next;
+            
+            deleteDemandNode( hashItem->d );
+            free( hashItem );   
+        }
+    }
+
+    free( digh6 );
 }
 
 
@@ -274,28 +296,6 @@ printDebugDemandInGeohash6( DemandInGeohash6 ** digh6 )
 	    deleteDemandInTime( dit );
         }
     }
-}
-
-
-void
-deleteDemandInGeohash6( DemandInGeohash6 * * digh6 )
-{
-    int               i;
-    DemandInGeohash6 *hashItem;
-    DemandInGeohash6 *next;
-
-    for ( i = 0; i < NUM_HASH_SIZE; i++ )
-    {
-        for ( hashItem = digh6[i]; NULL != hashItem; hashItem = next )
-        {
-            next = hashItem->next;
-            
-            deleteDemandNode( hashItem->d );
-            free( hashItem );   
-        }
-    }
-
-    free( digh6 );
 }
 
 
