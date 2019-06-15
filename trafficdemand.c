@@ -102,12 +102,12 @@ printDebugDemandNode( DemandNode * list );
 
 /* Start of DemandInGeohash6 API 
  *
- * DemandInGeohash6 provides ADT that allows us to store and organize demand into
- * geohash6 value.
+ * DemandInGeohash6 is ADT that allows us to store and organize demands by geohash6 value. 
  *
  * The ADT is a hash struture that each entry referring to a list of object DemandInGeohash6
- * that its geohash6 are hashed into the same hash key. Each DemandInGeohash6 object stores 
- * a list of demands of the same geohash6.
+ * that its geohash6 values are hashed into the same hash key. Each DemandInGeohash6 object stores 
+ * a list of demands of the same geohash6 and link to next DemandInGeohash6 that has different 
+ * geohash6 value but hashed into the same key in the high level DemandInGeohash6 hash structure.
  */
 
 long
@@ -129,6 +129,7 @@ void
 printDebugDemandInGeohash6( DemandInGeohash6 * * digh6 );
 
 /* End of DemandInGeohash6 API */ 
+
 
 int
 main( int argc, char * argv[] )
