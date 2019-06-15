@@ -58,6 +58,7 @@ struct demandintime
     DemandNode * mininterval[MININTERVALS_IN_YEAR]; 
 };
 
+
 typedef struct demandingeohash6 DemandInGeohash6; 
 
 struct demandingeohash6
@@ -221,6 +222,7 @@ main( int argc, char * argv[] )
     } while ( 1 );
 
 
+    /*
     // sort all demands by time, day, hour and min intervals
     dit = newDemandInTime();
  
@@ -235,6 +237,7 @@ main( int argc, char * argv[] )
     deleteDemandInGeohash6( digh6 );
 
     deleteDemandInTime( dit );
+    */
 
     // yup, I do not release memory as OS will claim it, there is no point to do so. :)
 
@@ -477,6 +480,40 @@ printDebugDemandInGeohash6( DemandInGeohash6 * * digh6 )
 /* End of DemandInGeohash6 API */
 
 
+/* Start of DemandInTime API */
+
+DemandInTime *
+newDemandInTime( void )
+{
+    DemandInTime * dit;
+    int            i;
+
+    dit = malloc( sizeof( *dit ) );
+    if ( NULL == dit )
+    {
+        fprintf( stderr, "failed to allocate more memory for DemandInTime\n" );
+        exit( 1 );
+    }
+
+    for ( i = 0; i < DAYS_IN_YEAR; i++ )
+    {   
+        dit->day[i] = NULL;
+    } 
+
+    for ( i = 0; i < HOURS_IN_YEAR; i++ )
+    {
+        dit->hour[i] = NULL;
+    } 
+
+    for ( i = 0; i < MININTERVALS_IN_YEAR; i++ )
+    {
+        dit->mininterval[i] = NULL;
+    } 
+
+    return dit;
+}
+
+
 void
 deleteDemandInTime( DemandInTime * dit )
 {
@@ -530,54 +567,13 @@ printDebugDemandInTime( DemandInTime * dit )
 }
 
 
-DemandInTime *
-newDemandInTime( void )
-{
-    DemandInTime *dit;
-    int           i;
-
-    dit = malloc( sizeof( *dit ) );
-    if ( NULL != dit )
-    {
-        for ( i = 0; i < DAYS_IN_YEAR; i++ )
-        {   
-            dit->day[i] = NULL;
-        } 
-
-        for ( i = 0; i < HOURS_IN_YEAR; i++ )
-        {
-            dit->hour[i] = NULL;
-        } 
-
-        for ( i = 0; i < MININTERVALS_IN_YEAR; i++ )
-        {
-            dit->mininterval[i] = NULL;
-        } 
-    }
-
-    return dit;
-}
-
-
-void
-processDemandNodeInTime( DemandInTime * dit, DemandNode *list )
-{
-    int i;
-
-    for ( i = 0; i < list->cnt; i++ )
-    {
-        processDemandInTime( dit, list->d[i], 1 );
-    }
-}
-
-
 void
 processDemandInTime( DemandInTime * dit, Demand * dptr, long nrDemand )
 {
-    int i;
-    int dayIndex;
-    int hourIndex;
-    int minIntervalIndex;
+    long i;
+    int  dayIndex;
+    int  hourIndex;
+    int  minIntervalIndex;
 
     for ( i = 0; i < nrDemand; i++ )
     {
@@ -596,6 +592,20 @@ processDemandInTime( DemandInTime * dit, Demand * dptr, long nrDemand )
         dit->mininterval[minIntervalIndex] = processDemandNode( dit->mininterval[minIntervalIndex], &( dptr[i] ), 1 );
     }
 }
+
+
+void
+processDemandNodeInTime( DemandInTime * dit, DemandNode * list )
+{
+    int i;
+
+    for ( i = 0; i < list->cnt; i++ )
+    {
+        processDemandInTime( dit, list->d[i], 1 );
+    }
+}
+
+/* End of DemandInTime API */
 
 
 Demand *
