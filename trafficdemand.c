@@ -72,20 +72,11 @@ struct demandingeohash6
 Demand *
 scanDemand( char * cptr, Demand * dptr );
 
-DemandNode *
-newDemandNode( size_t num );
-
 DemandInTime *
 newDemandInTime( void );
 
 void
-deleteDemandNode( DemandNode * list );
-
-void
 deleteDemandInTime( DemandInTime * dit ); 
-
-DemandNode *
-processDemandNode( DemandNode * list, Demand * dptr, long nrDemand );
 
 void
 processDemandInTime( DemandInTime * dit, Demand * dptr, long nrDemand );
@@ -96,8 +87,23 @@ processDemandNodeInTime( DemandInTime * dit, DemandNode *list );
 void
 printDebugDemandInTime( DemandInTime * dit );
 
+
+/* Start of DemandNode API 
+ */
+
+DemandNode *
+newDemandNode( size_t num );
+
+void
+deleteDemandNode( DemandNode * list );
+
+DemandNode *
+processDemandNode( DemandNode * list, Demand * dptr, long nrDemand );
+
 void
 printDebugDemandNode( DemandNode * list );
+
+/* End of DemandNode API */
 
 
 /* Start of DemandInGeohash6 API 
@@ -215,6 +221,8 @@ main( int argc, char * argv[] )
     digh6 = newDemandInGeohash6();
 
     processDemandInGeohash6( digh6, dptr, nrDemand );
+
+    printDebugDemandInGeohash6( digh6 );
  
     deleteDemandInGeohash6( digh6 );
 
@@ -224,6 +232,100 @@ main( int argc, char * argv[] )
 
     return 0;
 }
+
+
+/* Start of DemandNode API */
+
+DemandNode *
+newDemandNode( size_t num )
+{
+    DemandNode * newNode;
+
+    /* reduce by 1 because DemandNode already contains 1 element for the array
+     */
+    newNode = malloc( sizeof( DemandNode ) + ( ( num - 1 ) * ( sizeof( Demand * ) ) ) );
+    if ( NULL == newNode )
+    {
+        fprintf( stderr, "failed to allocate memory for more DemandNode\n" );
+        exit( 1 );
+    }
+
+    newNode->next = NULL;
+    newNode->prev = NULL;
+    newNode->cnt = 0;
+
+    return newNode;
+}
+
+
+void
+deleteDemandNode( DemandNode * item )
+{
+    DemandNode * tmp;
+
+    while ( NULL != item )
+    {
+        tmp = item;
+        item = item->next;
+ 
+        free( tmp );
+    }
+
+    free( item );
+}
+
+
+DemandNode *
+processDemandNode( DemandNode * list, Demand * dptr, long nrDemand )
+{
+    long         i;   
+    DemandNode * newNode;
+
+    for ( i = 0; i < nrDemand; i++ )
+    {
+        if ( NULL == list
+             || list->cnt >= NUM_DEMAND_PER_NODE )
+        {
+            newNode = newDemandNode( NUM_DEMAND_PER_NODE );
+
+            newNode->next = list;
+            if ( NULL != list )
+            {
+	        list->prev = newNode;
+            }
+
+            list = newNode;
+        }  
+
+        list->d[list->cnt++] = &( dptr[i] );
+    }
+
+    return list;
+}
+
+
+void
+printDebugDemandNode( DemandNode * item )
+{
+    int i;
+
+    while ( NULL != item )
+    {
+        for ( i = 0; i < item->cnt; i++ )
+        {
+            printf( "%s,%02d,%02d:%02d,%.16lf\n", 
+                    item->d[i]->geohash6, 
+                    item->d[i]->day,
+                    item->d[i]->hh, 
+                    item->d[i]->mm, 
+                    item->d[i]->value );
+        }
+
+        item = item->next;
+    }
+}
+
+/* End of DemandNode API */
 
 
 /* Start of DemandInGeohash6 API */
@@ -253,7 +355,7 @@ newDemandInGeohash6( void )
     digh6 = malloc( NUM_HASH_SIZE * sizeof( DemandInGeohash6 * ) );
     if ( NULL == digh6 )
     {
-        fprintf( stderr, "failed to allocte memory for new DemandInGeohash6\n" );
+        fprintf( stderr, "failed to allocte memory for more DemandInGeohash6 *\n" );
         exit( 1 );
     }
 
@@ -311,7 +413,7 @@ insertDemandInGeohash6( DemandInGeohash6 * * digh6, Demand * d)
         hashItem = malloc( sizeof( * hashItem ) );
 	if ( NULL == hashItem )
 	{
-	    fprintf( stderr, "failed to allocate new memory for DemandInGeohash6\n" );
+	    fprintf( stderr, "failed to allocate memory for more DemandInGeohash6\n" );
 	    exit( 1 );
 	}
 
@@ -338,11 +440,10 @@ processDemandInGeohash6( DemandInGeohash6 * * digh6, Demand * d, long nrDemand )
 
 
 void
-printDebugDemandInGeohash6( DemandInGeohash6 ** digh6 )
+printDebugDemandInGeohash6( DemandInGeohash6 * * digh6 )
 {
-     
-    int               i;
-    DemandInGeohash6 *hashItem;
+    int                i;
+    DemandInGeohash6 * hashItem;
 
     for ( i = 0; i < NUM_HASH_SIZE; i++ )
     {
@@ -369,21 +470,6 @@ printDebugDemandInGeohash6( DemandInGeohash6 ** digh6 )
 
 
 void
-deleteDemandNode( DemandNode * item )
-{
-    DemandNode *tmp;
-
-    while ( NULL != item )
-    {
-        tmp = item;
-        item = item->next;
- 
-        free( tmp );
-    }
-}
-
-
-void
 deleteDemandInTime( DemandInTime * dit )
 {
     int i;
@@ -404,28 +490,6 @@ deleteDemandInTime( DemandInTime * dit )
     }
  
     free( dit );   
-}
-
-
-void
-printDebugDemandNode( DemandNode * item )
-{
-    int i;
-
-    while ( NULL != item )
-    {
-        for ( i = 0; i < item->cnt; i++ )
-        {
-            printf( "%s,%02d,%02d:%02d,%.16lf\n", 
-                    item->d[i]->geohash6, 
-                    item->d[i]->day,
-                    item->d[i]->hh, 
-                    item->d[i]->mm, 
-                    item->d[i]->value );
-        }
-
-        item = item->next;
-    }
 }
 
 
@@ -484,40 +548,6 @@ newDemandInTime( void )
     }
 
     return dit;
-}
-
-
-DemandNode *
-processDemandNode( DemandNode * list, Demand * dptr, long nrDemand )
-{
-    int         i;   
-    DemandNode *newNode;
-
-    for ( i = 0; i < nrDemand; i++ )
-    {
-        if ( NULL == list
-             || list->cnt >= NUM_DEMAND_PER_NODE )
-        {
-            newNode = newDemandNode( NUM_DEMAND_PER_NODE );
-            if ( NULL == newNode )
-            {
-	        fprintf( stderr, "no memory for new demand node of size = %d\n", NUM_DEMAND_PER_NODE );
-	        exit( 1 );
-            }
-
-            newNode->next = list;
-            if ( NULL != list )
-            {
-	        list->prev = newNode;
-            }
-
-            list = newNode;
-        }  
-
-        list->d[list->cnt++] = &( dptr[i] );
-    }
-
-    return list;
 }
 
 
@@ -644,18 +674,3 @@ scanDemand( char * cptr, Demand * dptr )
 }
 
 
-DemandNode *
-newDemandNode( size_t num )
-{
-    DemandNode *newNode;
-
-    newNode = malloc( sizeof( DemandNode ) + ( ( num - 1 ) * ( sizeof( Demand * ) ) ) );
-    if ( NULL != newNode )
-    {
-        newNode->next = NULL;
-        newNode->prev = NULL;
-        newNode->cnt = 0;
-    }
-
-    return newNode;
-}
