@@ -448,6 +448,7 @@ newDemandNode( void )
 {
     DemandNode * newNode;
 
+
     /* reduce by 1 because DemandNode already contains 1 element for the array
      */
     newNode = malloc( sizeof( DemandNode ) + ( ( NUM_DEMAND_PER_NODE - 1 ) * ( sizeof( Demand * ) ) ) );
@@ -470,6 +471,7 @@ deleteDemandNode( DemandNode * item )
 {
     DemandNode * tmp;
 
+
     while ( NULL != item )
     {
         tmp = item;
@@ -487,6 +489,7 @@ processDemandNode( DemandNode * list, Demand * dptr, long nrDemand )
 {
     long         i;   
     DemandNode * newNode;
+
 
     for ( i = 0; i < nrDemand; i++ )
     {
@@ -516,6 +519,7 @@ printDebugDemandNode( DemandNode * item )
 {
     int i;
 
+
     while ( NULL != item )
     {
         for ( i = 0; i < item->cnt; i++ )
@@ -543,6 +547,7 @@ getHashValueOfString( char * s )
     long result;
     int  c;
 
+
     result = 0;
     while ( ( c = *s++ )  != '\0' )
     {
@@ -558,6 +563,7 @@ newDemandInGeohash6( void )
 {
     DemandInGeohash6 * * digh6 = NULL;
     int                  i;
+
 
     digh6 = malloc( NUM_HASH_SIZE * sizeof( DemandInGeohash6 * ) );
     if ( NULL == digh6 )
@@ -582,6 +588,7 @@ deleteDemandInGeohash6( DemandInGeohash6 * * digh6 )
     DemandInGeohash6 * hashItem;  
     DemandInGeohash6 * next;
 
+
     for ( i = 0; i < NUM_HASH_SIZE; i++ )
     {
         for ( hashItem = digh6[i]; NULL != hashItem; hashItem = next )
@@ -603,6 +610,7 @@ insertGeohash6( DemandInGeohash6 * * digh6, char * geohash6, int createIfNotExis
     long               hashkey;
     DemandInGeohash6 * hashItem = NULL;
  
+
     hashkey = getHashValueOfString( geohash6 ); 
 
     assert( hashkey >= 0 && hashkey < NUM_HASH_SIZE );
@@ -668,6 +676,7 @@ printDebugDemandInGeohash6( DemandInGeohash6 * * digh6 )
     int                i;
     DemandInGeohash6 * hashItem;
 
+
     for ( i = 0; i < NUM_HASH_SIZE; i++ )
     {
         for ( hashItem = digh6[i]; NULL != hashItem; hashItem = hashItem->next )
@@ -700,6 +709,7 @@ newDemandInTime( void )
     DemandInTime * dit;
     int            i;
 
+
     dit = malloc( sizeof( *dit ) );
     if ( NULL == dit )
     {
@@ -731,6 +741,7 @@ deleteDemandInTime( DemandInTime * dit )
 {
     int i;
 
+
     for ( i = 0; i < DAYS_IN_YEAR; i++ )
     {
         deleteDemandNode( dit->day[i] );  
@@ -757,15 +768,16 @@ printDebugDemandInTime( DemandInTime * dit )
     int hourIndex;
     int minIntervalIndex;
 
+
     for ( dayIndex = 0; dayIndex < DAYS_IN_YEAR; dayIndex++ )
     {
         if ( NULL != dit->day[dayIndex] )
         { 
-            for ( hourIndex = dayIndex * 24; hourIndex < dayIndex * 24 + 24; hourIndex++ )
+            for ( hourIndex = dayIndex * HOURS_IN_DAY; hourIndex < dayIndex * HOURS_IN_DAY + HOURS_IN_DAY; hourIndex++ )
             {
                 if ( NULL != dit->hour[hourIndex] )
                 {
-                    for ( minIntervalIndex = hourIndex * 4; minIntervalIndex < hourIndex * 4 + 4; minIntervalIndex++ )
+                    for ( minIntervalIndex = hourIndex * MININTERVALS_IN_DAY; minIntervalIndex < hourIndex * MININTERVALS_IN_DAY + MININTERVALS_IN_DAY; minIntervalIndex++ )
                     {
                          if ( NULL != dit->mininterval[minIntervalIndex] )
                          {
@@ -787,13 +799,14 @@ processDemandInTime( DemandInTime * dit, Demand * dptr, long nrDemand )
     int  hourIndex;
     int  minIntervalIndex;
 
+
     for ( i = 0; i < nrDemand; i++ )
     {
         // day is started at 1, hour at 0 and min interval at 0 from import data
 
         dayIndex  = dptr[i].day - 1;  
-        hourIndex = dayIndex * 24 + dptr[i].hh;
-        minIntervalIndex = hourIndex * 4 + ( dptr[i].mm / MIN_IN_MININTERVAL );
+        hourIndex = dayIndex * HOURS_IN_DAY + dptr[i].hh;
+        minIntervalIndex = hourIndex * MININTERVALS_IN_DAY + ( dptr[i].mm / MIN_IN_MININTERVAL );
 
         assert( dayIndex < DAYS_IN_YEAR );
         assert( hourIndex < HOURS_IN_YEAR );
@@ -810,6 +823,7 @@ void
 processDemandNodeInTime( DemandInTime * dit, DemandNode * list )
 {
     int i;
+
 
     for ( i = 0; i < list->cnt; i++ )
     {
@@ -828,6 +842,7 @@ scanDemand( char * cptr, Demand * dptr )
     int    index       = 0;
     int    geohash6Len = 0;
     Demand d           = { "\0", 0, 0, 0.0 };
+
 
     while ( ( c = *cptr++ ) != '\0'
             && c != '\n' )
