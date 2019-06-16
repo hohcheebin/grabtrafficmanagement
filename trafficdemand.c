@@ -272,7 +272,7 @@ main( int argc, char * argv[] )
 			}
 
                         minIntervalFrom = minFrom / MIN_IN_MININTERVAL;
-			minIntervalTo = minFrom / MIN_IN_MININTERVAL;
+			minIntervalTo = minTo / MIN_IN_MININTERVAL;
 
 	                for ( i = hourFrom * MININTERVALS_IN_DAY + minIntervalFrom; i <= hourFrom * MININTERVALS_IN_DAY + minIntervalTo; i++ )
 			{
