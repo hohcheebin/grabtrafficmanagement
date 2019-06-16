@@ -1,13 +1,16 @@
 # grabtrafficmanagement
 Grab traffic management challenge
 
+
 >> Prequisite
 You need a ANSI C compliant compiler, and preferrable a GNU/Linux, Unix like or MacOS environment.
 
 The following assumes that your c compiler is cc
 
+
 >> How to compile
 cc trafficdemand.c -o a.out
+
 
 >> How to run it
 OVERVIEW: Trafic demand management and filtering tool
@@ -23,3 +26,13 @@ USAGE: a.out [options] file ...
 If file is not given, it is reading from standard input
 
 
+>> Example run with the sample training dataset
+
+./a.out -gqp098p -d1 -t0200..0245 training.csv 
+
+will result in the following output:
+
+qp098p,01,02:00,0.227952237769632110
+qp098p,01,02:15,0.316001351815636045
+qp098p,01,02:30,0.249384694063620904
+qp098p,01,02:45,0.238222675389425292
