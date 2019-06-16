@@ -3,6 +3,8 @@
  *
  * This program is built for programming challenge, https://www.aiforsea.com/traffic-management
  *
+ * This program provides a simple command-line interface to filter traffic demand dataset.
+ *
  */
 
 
@@ -187,10 +189,22 @@ main( int argc, char * argv[] )
 	hourMinInterval[i] = 1;
     }
 
-    while ( ( opt = getopt( argc, argv, "g:d:t:" ) ) != -1 )
+    while ( ( opt = getopt( argc, argv, "g:d:t:h" ) ) != -1 )
     {
         switch ( opt )
         {
+	    case 'h':
+                printf( "OVERVIEW: Trafic demand filtering tool\n" );
+                printf( "\n" );
+                printf( "USAGE: %s [options] file\n", argv[0] );
+                printf( "\n" );
+                printf( "    -gqp03tu,qp09fu                    Filter demands on geohash6 values, arg1, arg2, arg3\n" );
+                printf( "    -d1..3,5..6,9                      Filter demands on day 1 to 3, 5 to 6 and 9\n" );
+                printf( "    -t1000..1045,1315..1345            Filter demands on time 10:00 to 10:45 or 13:15 to 13:45\n" );
+                printf( "\n" );
+		exit( 0 );
+		break;
+
             case 'g':
                 geohash6 = optarg;
                 break;
@@ -878,6 +892,9 @@ scanDemand( char * cptr, Demand * dptr )
 }
 
 
+/* the function parses the following string into from and to value in integer
+ *
+ */
 int
 parseRange( char * s, int * from, int * to )
 {
