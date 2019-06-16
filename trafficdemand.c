@@ -155,7 +155,10 @@ printDebugDemandInGeohash6( DemandInGeohash6 * * digh6 );
 
 /* End of DemandInGeohash6 API */ 
 
-static char * progname = NULL;
+
+/* global variables */ 
+static char * baseProgramName = NULL;
+
 
 int
 main( int argc, char * argv[] )
@@ -163,7 +166,6 @@ main( int argc, char * argv[] )
     int      day[DAYS_IN_YEAR] = { 0 };
     int      hourMinInterval[MININTERVALS_IN_DAY * HOURS_IN_DAY] = { 0 };
     char   * geohash6 = NULL;
-    char   * days = NULL;
     int      hourMinFrom;
     int      hourMinTo;
     int      dayFrom;
@@ -173,14 +175,20 @@ main( int argc, char * argv[] )
     long     nrDemand = 0; 
     int      i;
     int      ret;
-    int      hh;
-    int      mm;
     int      opt;
     char     buf[BUFSIZ];
     FILE *   file = stdin;
 
-
      
+    baseProgramName = strrchr( argv[0], '/' );
+    if ( NULL == baseProgramName )
+    {
+	baseProgramName = argv[0];
+    }
+    else
+    {
+        baseProgramName++;
+    }   
     
     for ( i = 0; i < DAYS_IN_YEAR; i++ )
     {
@@ -199,11 +207,14 @@ main( int argc, char * argv[] )
 	    case 'h':
                 printf( "OVERVIEW: Trafic demand management and filtering tool\n" );
                 printf( "\n" );
-                printf( "USAGE: %s [options] file\n", argv[0] );
+                printf( "USAGE: %s [options] file ...\n", baseProgramName );
                 printf( "\n" );
-                printf( "    -gqp03tu,qp09fu                    Filter demands on geohash6 values, arg1, arg2, arg3\n" );
-                printf( "    -d1..3,5..6,9                      Filter demands on day 1 to 3, 5 to 6 and 9\n" );
-                printf( "    -t1000..1045,1315..1345            Filter demands on time 10:00 to 10:45 or 13:15 to 13:45\n" );
+                printf( "[options]\n" );
+                printf( "    -gqp03tu,qp09fu                    Filter demands matching the geohash6 values qp03tu or qp09fu\n" );
+                printf( "    -d1..3,5..6,9                      Filter demands matching day 1 to 3, 5 to 6 or 9\n" );
+                printf( "    -t1000..1045,1315..1345            Filter demands matching time 10:00 to 10:45 or 13:15 to 13:45\n" );
+                printf( "\n\n" );
+                printf( "If file is not given, it is reading from standard input\n" );
                 printf( "\n" );
 		exit( 0 );
 		break;
@@ -218,8 +229,7 @@ main( int argc, char * argv[] )
                     hourMinInterval[i] = 0;
                 }
 
-                days = optarg;
-                ret = parseRange( days, &hourMinFrom, &hourMinTo );
+                ret = parseRange( optarg, &hourMinFrom, &hourMinTo );
 
                 do
                 {
@@ -282,8 +292,7 @@ main( int argc, char * argv[] )
                     day[i] = 0;
                 }
 
-                days = optarg;
-                ret = parseRange( days, &dayFrom, &dayTo );
+                ret = parseRange( optarg, &dayFrom, &dayTo );
 
 		do	
 		{
