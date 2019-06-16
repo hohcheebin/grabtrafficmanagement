@@ -36,3 +36,16 @@ qp098p,01,02:00,0.227952237769632110
 qp098p,01,02:15,0.316001351815636045
 qp098p,01,02:30,0.249384694063620904
 qp098p,01,02:45,0.238222675389425292
+
+
+>> How to sum up values?
+
+a.out -gqp098p -d1 -t0200..0245 ../TrafficManagement/training.csv | awk 'BEGIN { FS="," } {sum+=$4} END {print sum}'
+
+this will give us sum up of 1.031560959038314
+
+By adding "NR" to awk, we can get the average
+
+a.out -gqp098p -d1 -t0200..0245 ../TrafficManagement/training.csv | awk 'BEGIN { FS="," } {sum+=$4} END {print sum / NR}'
+
+this will give us 0.257890239759579
