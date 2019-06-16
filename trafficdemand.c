@@ -72,6 +72,9 @@ struct demandingeohash6
 Demand *
 scanDemand( char * cptr, Demand * dptr );
 
+int
+parseRange( char * s, int * from, int * to );
+
 
 /* Start of DemandInTime API 
  * 
@@ -152,11 +155,15 @@ printDebugDemandInGeohash6( DemandInGeohash6 * * digh6 );
 int
 main( int argc, char * argv[] )
 {
+    int      day[DAYS_IN_YEAR] = { 0 };
     char   * geohash6 = NULL;
+    char   * days = NULL;
+    int      dayFrom;
+    int      dayTo;
     Demand * base  = NULL;
     Demand * dptr  = NULL;
     long     nrDemand = 0; 
-    int      n;
+    int      i;
     int      ret;
     int      hh;
     int      mm;
@@ -164,13 +171,53 @@ main( int argc, char * argv[] )
     char     buf[BUFSIZ];
     FILE *   file = stdin;
 
-    while ( ( opt = getopt( argc, argv, "g:" ) ) != -1 )
+    
+    for ( i = 0; i < DAYS_IN_YEAR; i++ )
+    {
+        day[i] = 1;
+    }
+
+    while ( ( opt = getopt( argc, argv, "g:d:" ) ) != -1 )
     {
         switch ( opt )
         {
             case 'g':
                 geohash6 = optarg;
                 break;
+
+            case 'd':
+                for ( i = 0; i < DAYS_IN_YEAR; i++ )
+                {
+                    day[i] = 0;
+                }
+
+                days = optarg;
+                ret = parseRange( days, &dayFrom, &dayTo );
+
+		do	
+		{
+                    if ( ret < 0 )
+                    {
+                        fprintf( stderr, "Invalid argument to -d%s\n", optarg );
+                        exit( 1 );
+                    }
+                    else if ( ret == 0 )
+                    {
+                        break;
+                    }
+                    else
+		    {
+                        for ( i = dayFrom - 1; i < dayTo; i++ )
+                        {
+                            day[i] = 1;
+                        }
+
+                        ret = parseRange( NULL, &dayFrom, &dayTo ); 
+ 		    }
+		}
+		while ( 1 );
+          
+		break;
 
             default:
                 fprintf( stderr, "invalid option (%c) and argument\n", opt );
@@ -261,9 +308,17 @@ main( int argc, char * argv[] )
             }
         }
 
-        processDemandInGeohash6( glist, dptr, nrDemand, ! hasFilterGeohash6 );
+        for ( i = 0; i < nrDemand; i++ )
+        {
+            if ( day[dptr[i].day - 1] )
+            {
+                insertDemandInGeohash6( glist, &( dptr[i] ), 0 );
+            }
+        }
 
-       // printDebugDemandInGeohash6( glist );
+        //processDemandInGeohash6( glist, dptr, nrDemand, ! hasFilterGeohash6 );
+
+        printDebugDemandInGeohash6( glist );
 
         deleteDemandInGeohash6( glist );
     }
@@ -737,4 +792,80 @@ scanDemand( char * cptr, Demand * dptr )
 }
 
 
+int
+parseRange( char * s, int * from, int * to )
+{
+    int           val;
+    int           c;
+    static char * ls  = NULL;
+
+
+    if ( NULL != s )
+    {
+        ls = s;
+    }
+   
+    assert( NULL != ls );
+
+    if ( '\0' == *ls )
+    {
+        return 0;
+    }
+ 
+    val = 0;
+    while ( ( c = *ls ) != '\0'
+            && isdigit( c ) )
+    {
+        val = val * 10 + ( c - '0' );
+        ls++;
+    }
+
+    if ( '\0' != c
+         && '.' != c 
+         && ',' != c )
+    {
+        return -1;
+    }
+
+    *from = val;
+    *to = val;
+
+    if ( ',' == c )
+    {
+        ls++;
+    }
+    else if ( '.' == c )
+    {
+        ls++;
+
+        if ( ( c = *( ls++ ) ) != '.' )
+        {
+            return -1;
+        }
+
+        val = 0;
+        while ( ( c = *ls ) != '\0'
+                && isdigit( c ) )
+        {
+            val = val * 10 + ( c - '0' );
+            ls++;
+        }
+
+        if ( '\0' != c
+             && '.' != c
+             && ',' != c )
+        {
+            return -1;
+        }
+  
+        *to = val;
+
+        if ( ',' == c )
+        {
+            ls++;
+        }
+    }
+
+    return 1;
+}
 
