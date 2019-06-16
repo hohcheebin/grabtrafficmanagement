@@ -155,6 +155,7 @@ printDebugDemandInGeohash6( DemandInGeohash6 * * digh6 );
 
 /* End of DemandInGeohash6 API */ 
 
+static char * progname = NULL;
 
 int
 main( int argc, char * argv[] )
@@ -178,6 +179,8 @@ main( int argc, char * argv[] )
     char     buf[BUFSIZ];
     FILE *   file = stdin;
 
+
+     
     
     for ( i = 0; i < DAYS_IN_YEAR; i++ )
     {
@@ -194,7 +197,7 @@ main( int argc, char * argv[] )
         switch ( opt )
         {
 	    case 'h':
-                printf( "OVERVIEW: Trafic demand filtering tool\n" );
+                printf( "OVERVIEW: Trafic demand management and filtering tool\n" );
                 printf( "\n" );
                 printf( "USAGE: %s [options] file\n", argv[0] );
                 printf( "\n" );
@@ -892,8 +895,23 @@ scanDemand( char * cptr, Demand * dptr )
 }
 
 
-/* the function parses the following string into from and to value in integer
+/* the function parses the following pattern of string into both from and to values 
+ * in each call. Passing NULL as s when you want to continue parsing where the last 
+ * parse stops.
  *
+ * 1,3,5
+ * - 1st parse (not NULL) will reeturn 1 and 1
+ * - 2nd parse (NULL) will return 3 and 3
+ * - 3rd parse (NULL) will return 5 and 5
+ *
+ * 1..3,5,7..9
+ * - 1st parse (not NULL) will return 1 and 3 
+ * - 2nd parse (NULL) will return 5 and 5
+ * - 3rd parse (NULL) will return 7 and 9
+ *
+ * it returns 1 when parsing is success, 0 when EOF (no data for further parsing)
+ * -1 when it fails to parse the string because of none-numeric character or because
+ * instead of 1..5, we put 1.,5
  */
 int
 parseRange( char * s, int * from, int * to )
