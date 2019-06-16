@@ -17,10 +17,11 @@
 enum 
 {
     NUM_DEMAND_PER_NODE  = 500,
+    MININTERVALS_IN_DAY  = 4,
     HOURS_IN_DAY         = 24,
     DAYS_IN_YEAR         = 365,
     HOURS_IN_YEAR        = DAYS_IN_YEAR * HOURS_IN_DAY,  
-    MININTERVALS_IN_YEAR = HOURS_IN_YEAR * 4,
+    MININTERVALS_IN_YEAR = HOURS_IN_YEAR * MININTERVALS_IN_DAY,
     HASH_MULTIPLIER      = 37,
     NUM_HASH_SIZE        = 5000
 };
@@ -156,6 +157,7 @@ int
 main( int argc, char * argv[] )
 {
     int      day[DAYS_IN_YEAR] = { 0 };
+    int      hourMinIntervals[MININTERVALS_IN_DAY * HOURS_IN_DAY] = { 0 };
     char   * geohash6 = NULL;
     char   * days = NULL;
     int      dayFrom;
@@ -177,13 +179,22 @@ main( int argc, char * argv[] )
         day[i] = 1;
     }
 
-    while ( ( opt = getopt( argc, argv, "g:d:" ) ) != -1 )
+    for ( i = 0; i < MININTERVALS_IN_DAY * HOURS_IN_DAY; i++ )
+    {
+        hourMinIntervals[i] = 1;
+    }
+
+    while ( ( opt = getopt( argc, argv, "g:d:t:" ) ) != -1 )
     {
         switch ( opt )
         {
             case 'g':
                 geohash6 = optarg;
                 break;
+
+            case 't':
+		printf("-- t\n");
+		break;
 
             case 'd':
                 for ( i = 0; i < DAYS_IN_YEAR; i++ )
