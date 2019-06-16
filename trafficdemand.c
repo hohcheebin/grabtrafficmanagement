@@ -179,7 +179,9 @@ main( int argc, char * argv[] )
     char     buf[BUFSIZ];
     FILE *   file = stdin;
 
-     
+    
+    // initialization 
+
     baseProgramName = strrchr( argv[0], '/' );
     if ( NULL == baseProgramName )
     {
@@ -200,6 +202,11 @@ main( int argc, char * argv[] )
 	hourMinInterval[i] = 1;
     }
 
+    // end of initialization
+
+
+    // program option and argument parsing
+   
     while ( ( opt = getopt( argc, argv, "g:d:t:h" ) ) != -1 )
     {
         switch ( opt )
@@ -351,6 +358,10 @@ main( int argc, char * argv[] )
         }
     }
 
+    // end of program option and argument parsing
+
+    // read data from standard input or files
+
     do
     {
         while ( fgets( buf, sizeof buf, file ) != NULL )
@@ -398,7 +409,9 @@ main( int argc, char * argv[] )
         }
     } while ( 1 );
 
+    // end of read data from standard input or files
 
+    // processing data into output
     {
         DemandInGeohash6 * * glist = NULL;
         int                  hasFilterGeohash6 = 0;
@@ -435,7 +448,7 @@ main( int argc, char * argv[] )
         deleteDemandInGeohash6( glist );
     }
 
-    // yup, I do not release memory as OS will claim it, there is no point to do so. :)
+    // processing data into output
 
     return 0;
 }
