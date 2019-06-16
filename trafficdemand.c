@@ -17,6 +17,7 @@
 enum 
 {
     NUM_DEMAND_PER_NODE  = 500,
+    MIN_IN_MININTERVAL   = 15,
     MININTERVALS_IN_DAY  = 4,
     HOURS_IN_DAY         = 24,
     DAYS_IN_YEAR         = 365,
@@ -157,9 +158,11 @@ int
 main( int argc, char * argv[] )
 {
     int      day[DAYS_IN_YEAR] = { 0 };
-    int      hourMinIntervals[MININTERVALS_IN_DAY * HOURS_IN_DAY] = { 0 };
+    int      hourMinInterval[MININTERVALS_IN_DAY * HOURS_IN_DAY] = { 0 };
     char   * geohash6 = NULL;
     char   * days = NULL;
+    int      hourMinFrom;
+    int      hourMinTo;
     int      dayFrom;
     int      dayTo;
     Demand * base  = NULL;
@@ -181,7 +184,7 @@ main( int argc, char * argv[] )
 
     for ( i = 0; i < MININTERVALS_IN_DAY * HOURS_IN_DAY; i++ )
     {
-        hourMinIntervals[i] = 1;
+	hourMinInterval[i] = 1;
     }
 
     while ( ( opt = getopt( argc, argv, "g:d:t:" ) ) != -1 )
@@ -193,7 +196,67 @@ main( int argc, char * argv[] )
                 break;
 
             case 't':
-		printf("-- t\n");
+	        for ( i = 0; i < MININTERVALS_IN_DAY * HOURS_IN_DAY; i++ )
+                {
+                    hourMinInterval[i] = 0;
+                }
+
+                days = optarg;
+                ret = parseRange( days, &hourMinFrom, &hourMinTo );
+
+                do
+                {
+                    if ( ret < 0 )
+                    {
+                        fprintf( stderr, "Invalid argument to -d%s\n", optarg );
+                        exit( 1 );
+                    }
+                    else if ( ret == 0 )
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        int hourFrom;
+			int hourTo;
+			int minFrom;
+			int minTo;
+                        int minIntervalFrom;
+			int minIntervalTo;
+
+                        if ( hourMinFrom > hourMinTo )
+                        {
+                            fprintf( stderr, "Invalid argument to -t, start range argument must be less than or equal to end range argument, example -t1000..1045\n" );
+                            exit( 1 );
+                        }
+                       
+			hourFrom = hourMinFrom / 100;
+			hourTo = hourMinTo / 100;
+			minFrom = hourMinFrom % 100;
+			minTo = hourMinTo % 100;
+
+                        if ( hourFrom >= 24 
+			     || hourTo >= 24 
+                             || minFrom >= 60
+                             || minTo >= 60 )
+			{
+			    fprintf( stderr, "Invalid argument to -t, 1015 means hour 10 and min 15\n" );
+			    exit( 1 );
+			}
+
+                        minIntervalFrom = minFrom / MIN_IN_MININTERVAL;
+			minIntervalTo = minFrom / MIN_IN_MININTERVAL;
+
+	                for ( i = hourFrom * MININTERVALS_IN_DAY + minIntervalFrom; i <= hourFrom * MININTERVALS_IN_DAY + minIntervalTo; i++ )
+			{
+			    hourMinInterval[i] = 1;   
+			}
+
+                        ret = parseRange( NULL, &hourMinFrom, &hourMinTo );
+                    }
+                }
+                while ( 1 );
+
 		break;
 
             case 'd':
@@ -218,6 +281,19 @@ main( int argc, char * argv[] )
                     }
                     else
 		    {
+                        if ( dayFrom <= 0  
+                             || dayTo <= 0 )
+                        {
+                            fprintf( stderr, "argument to -d must be 1 and less than 366\n" );
+                            exit( 1 );
+                        }
+ 
+                        if ( dayFrom > dayTo )
+                        {
+                            fprintf( stderr, "start range argument must be less than or equal to end range argument, example -d1..3\n" );
+                            exit( 1 );
+                        }
+
                         for ( i = dayFrom - 1; i < dayTo; i++ )
                         {
                             day[i] = 1;
@@ -321,13 +397,12 @@ main( int argc, char * argv[] )
 
         for ( i = 0; i < nrDemand; i++ )
         {
-            if ( day[dptr[i].day - 1] )
+            if ( day[dptr[i].day - 1] 
+                 && hourMinInterval[dptr[i].hh * MININTERVALS_IN_DAY + ( dptr[i].mm / MIN_IN_MININTERVAL ) ] )
             {
-                insertDemandInGeohash6( glist, &( dptr[i] ), 0 );
+                insertDemandInGeohash6( glist, &( dptr[i] ), ! hasFilterGeohash6 );
             }
         }
-
-        //processDemandInGeohash6( glist, dptr, nrDemand, ! hasFilterGeohash6 );
 
         printDebugDemandInGeohash6( glist );
 
@@ -692,7 +767,7 @@ processDemandInTime( DemandInTime * dit, Demand * dptr, long nrDemand )
 
         dayIndex  = dptr[i].day - 1;  
         hourIndex = dayIndex * 24 + dptr[i].hh;
-        minIntervalIndex = hourIndex * 4 + ( dptr[i].mm / 15 );
+        minIntervalIndex = hourIndex * 4 + ( dptr[i].mm / MIN_IN_MININTERVAL );
 
         assert( dayIndex < DAYS_IN_YEAR );
         assert( hourIndex < HOURS_IN_YEAR );
